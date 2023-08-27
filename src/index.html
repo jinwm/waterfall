@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>waterfall</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .waterfall-container {
+            width: 700px;
+            margin: 0 auto;
+            overflow-y: auto;
+        }
+
+        .content {
+            width: 100%;
+            background: greenyellow;
+        }
+
+        #btn {
+            top: 0;
+            left: 0;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <button id="btn">update</button>
+    <div class="waterfall-container">
+        <div class="waterfall-wrapper">
+
+        </div>
+    </div>
+</body>
+<script src="./js/jquery.js"></script>
+<script src="./js/index.js"></script>
+<script>
+    let wfl = new Waterfall({
+        container: '.waterfall-container',
+        column: 3,
+        gap: 10
+    });
+
+    // wfl.update({
+    //     gap: 30,
+    //     column: 3
+    // });
+
+    $("#btn").click(function () {
+        for (let i = 0; i < 10; i++) {
+            wfl.append(`<div class="content" style="height: ${Math.max(50, Math.random() * 200)}px;"></div>`)
+        }
+    })
+
+</script>
+
+</html>
