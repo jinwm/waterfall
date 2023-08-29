@@ -8,25 +8,39 @@
         appendTimer = null,
         resize = false,
         waterfallItems = '',
-        resizeTimer = null;
+        resizeTimer = null,
+        mutationObserver,
+        observerTimer = null;
 
     window.Waterfall = function (params) {
         let container = n(params.container);
-        if (container.find('.waterfall-wrapper').length == 0) {
-            container.html('<div class="waterfall-wrapper"></div>');
-        }
+        container.find('.waterfall-wrapper').length === 0 && container.html('<div class="waterfall-wrapper"></div>');
         wrapper = container.find('.waterfall-wrapper');
         gap = params.gap || gap;
         column = params.column || column;
         wrapWidth = wrapper.width() - gap * (column - 1);
         resize = params.resize || resize;
         resize && waterfallResize();
-        waterfallUpdate();
         this.update = waterfallUpdate;
         this.append = waterfallAppend;
+        childObserver();
     };
 
-    // 响应布局
+    // 监听属性/内容变化更新布局
+    function childObserver() {
+        mutationObserver = new MutationObserver(function (mutationsList, observer) {
+            clearTimeout(observerTimer);
+            observerTimer = setTimeout(function () {
+                waterfallUpdate();
+            }, 100)
+        }).observe(wrapper[0], {
+            attributes: true,
+            childList: true,
+            subtree: true
+        });
+    }
+
+    // 响应宽度
     function waterfallResize() {
         n(window).on('resize', function () {
             clearTimeout(resizeTimer);
@@ -47,7 +61,7 @@
             waterfallItems = n(waterfallItems);
             wrapper.append(waterfallItems);
             waterfallItems.css('opacity', 0).animate({
-                'opacity': 1
+                'opacity': '1'
             }, 100)
             waterfallItems = '';
             waterfallUpdate();
@@ -93,7 +107,7 @@
         })
     }
 
-    // 获取元素在瀑布流中的位置
+    // 获取元素在布局中的位置
     function getWaterfallIndex(item) {
         let index = n(item).index(),
             x = index % column,
