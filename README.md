@@ -5,6 +5,7 @@
 2. 创建一个 HTML 容器 myWaterfallContainer， `<div class="waterfall-wrapper"></div>`用于容纳瀑布流的布局。
 3. 初始化 Waterfall 实例，示例如下：
 
+```HTML
 <div id="myWaterfallContainer">
     <div class="waterfall-wrapper">
         <div class="waterfall-item">
@@ -16,6 +17,7 @@
         ...
     </div>
 </div>
+```
 
 ```javascript
 var myWaterfall = new Waterfall({
@@ -24,12 +26,12 @@ var myWaterfall = new Waterfall({
     gap: 20
 });
 
-更新布局
+// 更新布局
 myWaterfall.update({
     column: 3,  // 列数
     gap: 10 // 间距
 });
 
-追加内容
+// 追加内容
 myWaterfall.append("Your content goes here");
 myWaterfall.append("<div class='content'>Your content goes here</div>");
