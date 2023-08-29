@@ -13,6 +13,19 @@ var myWaterfall = new Waterfall({
     gap: 20
 });
 
+```html
+<div id="myWaterfallContainer">
+    <div class="waterfall-wrapper">
+        <div class="waterfall-item">
+            <div class="content">Your content goes here</div>
+        </div>
+        <div class="waterfall-item">
+            <div class="content">Your content goes here</div>
+        </div>
+        ...
+    </div>
+</div>
+
 更新布局
 myWaterfall.update({
     column: 3,  // 列数
