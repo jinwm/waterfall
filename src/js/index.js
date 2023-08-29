@@ -26,9 +26,9 @@
         this.append = waterfallAppend;
     };
 
-    // 自适应布局
+    // 响应布局
     function waterfallResize() {
-        $(window).on('resize', function () {
+        n(window).on('resize', function () {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
                 resizeTimer = null;
@@ -93,7 +93,7 @@
         })
     }
 
-    // 获取元素在瀑布流中的坐标
+    // 获取元素在瀑布流中的位置
     function getWaterfallIndex(item) {
         let index = n(item).index(),
             x = index % column,
@@ -111,8 +111,6 @@
         }
 
         return {
-            x,
-            y,
             top,
             left
         }
