@@ -6,20 +6,39 @@
         column = 2,
         vertical = 0,
         appendTimer = null,
-        waterfallItems = '';
+        resize = false,
+        waterfallItems = '',
+        resizeTimer = null;
 
-    function Waterfall(params) {
-        wrapper = n(params.container).find('.waterfall-wrapper');
+    window.Waterfall = function (params) {
+        let container = n(params.container);
+        if (container.find('.waterfall-wrapper').length == 0) {
+            container.html('<div class="waterfall-wrapper"></div>');
+        }
+        wrapper = container.find('.waterfall-wrapper');
         gap = params.gap || gap;
         column = params.column || column;
         wrapWidth = wrapper.width() - gap * (column - 1);
+        resize = params.resize || resize;
+        resize && waterfallResize();
         waterfallUpdate();
-
         this.update = waterfallUpdate;
         this.append = waterfallAppend;
+    };
+
+    // 自适应布局
+    function waterfallResize() {
+        $(window).on('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                resizeTimer = null;
+                wrapWidth = wrapper.width() - gap * (column - 1);
+                waterfallUpdate();
+            }, 100);
+        })
     }
 
-    // 追加新元素
+    // 追加元素
     function waterfallAppend(content) {
         waterfallItems += '<div class="waterfall-item" style="opacity:0;">' + content + '</div>'
         clearTimeout(appendTimer);
@@ -29,13 +48,13 @@
             wrapper.append(waterfallItems);
             waterfallItems.css('opacity', 0).animate({
                 'opacity': 1
-            }, 200)
-            waterfallUpdate();
+            }, 100)
             waterfallItems = '';
+            waterfallUpdate();
         }, 100)
     }
 
-    // 更新瀑布流
+    // 更新布局
     function waterfallUpdate(params) {
         if (params && params.gap) {
             gap = params.gap;
@@ -45,6 +64,10 @@
             column = params.column;
             vertical = Math.ceil(items.length / column);
         }
+        if (params && params.resize) {
+            resize = params.resize;
+            resize && waterfallResize();
+        }
         items = wrapper.find('.waterfall-item');
         let wrapperHeight = 0;
         n.each(items, function (index, item) {
@@ -53,9 +76,10 @@
             wrapperHeight = _wrapperHeight > wrapperHeight ? _wrapperHeight : wrapperHeight;
 
             n(item).css({
-                'overflow-x': 'hidden',
-                'width': wrapWidth / column,
+                'overflow': 'hidden',
                 'position': 'absolute',
+                'transition': 'all .3s',
+                'width': wrapWidth / column,
                 'top': offset.top,
                 'left': offset.left
             })
@@ -93,5 +117,4 @@
             left
         }
     }
-    window.Waterfall = Waterfall;
 })($)
