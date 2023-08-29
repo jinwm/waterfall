@@ -29,7 +29,8 @@ var myWaterfall = new Waterfall({
 // 更新布局
 myWaterfall.update({
     column: 3,  // 列数
-    gap: 10 // 间距
+    gap: 10, // 间距
+    resize: true  // 自适应宽度
 });
 
 // 追加内容
