@@ -12,26 +12,20 @@
         }
 
         .waterfall-container {
-            width: 700px;
+            width: 500px;
+            max-width: 100%;
             margin: 0 auto;
-            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
         }
 
         .content {
-            width: 100%;
-            background: greenyellow;
-        }
-
-        #btn {
-            top: 0;
-            left: 0;
-            position: absolute;
+            background: rgba(0, 0, 0, .1);
         }
     </style>
 </head>
 
 <body>
-    <button id="btn">update</button>
     <div class="waterfall-container">
         <div class="waterfall-wrapper">
 
@@ -43,8 +37,8 @@
 <script>
     let wfl = new Waterfall({
         container: '.waterfall-container',
-        column: 3,
-        gap: 10
+        column: 4,
+        resize: true
     });
 
     // wfl.update({
@@ -52,11 +46,9 @@
     //     column: 3
     // });
 
-    $("#btn").click(function () {
-        for (let i = 0; i < 10; i++) {
-            wfl.append(`<div class="content" style="height: ${Math.max(50, Math.random() * 200)}px;"></div>`)
-        }
-    })
+    for (let i = 0; i < 24; i++) {
+        wfl.append(`<div class="content" style="height: ${Math.max(90, Math.random() * 180)}px;"></div>`)
+    }
 
 </script>
 
