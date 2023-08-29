@@ -5,18 +5,6 @@
 2. 创建一个 HTML 容器 myWaterfallContainer， `<div class="waterfall-wrapper"></div>`用于容纳瀑布流的布局。
 3. 初始化 Waterfall 实例，示例如下：
 
-```html
-<div id="myWaterfallContainer">
-    <div class="waterfall-wrapper">
-        <div class="waterfall-item">
-            <div class="content">Your content goes here</div>
-        </div>
-        <div class="waterfall-item">
-            <div class="content">Your content goes here</div>
-        </div>
-        ...
-    </div>
-</div>
 
 ```javascript
 var myWaterfall = new Waterfall({
