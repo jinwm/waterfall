@@ -61,14 +61,18 @@
 
     // 响应宽度
     function waterfallResize() {
-        window.addEventListener('resize', function () {
+        if (!resize) {
+            return window.onresize = null;
+        }
+        window.onresize = handleResize;
+        function handleResize() {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
                 resizeTimer = null;
                 wrapWidth = wrapper.offsetWidth - gap * (column - 1);
                 waterfallUpdate();
             }, 100);
-        })
+        }
     }
 
     // 追加内容
@@ -155,9 +159,14 @@
                 column = params.column;
                 vertical = Math.ceil(items.length / column);
             }
-            if (params.resize) {
-                resize = params.resize;
-                resize && waterfallResize();
+            if (params.resize === true || params.resize === false) {
+                if (params.resize && !resize) {
+                    resize = true;
+                    waterfallResize();
+                } else if (params.resize === false) {
+                    resize = false;
+                    waterfallResize();
+                }
             }
         }
 
