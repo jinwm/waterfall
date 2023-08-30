@@ -1,5 +1,6 @@
 (function (n) {
-    let wrapper = null,
+    let container = null,
+        wrapper = null,
         wrapWidth = null,
         items = null,
         gap = 10,
@@ -13,7 +14,7 @@
         observerTimer = null;
 
     window.Waterfall = function (params) {
-        let container = n(params.container);
+        container = n(params.container);
         container.find('.waterfall-wrapper').length === 0 && container.html('<div class="waterfall-wrapper"></div>');
         wrapper = container.find('.waterfall-wrapper');
         gap = params.gap || gap;
@@ -23,11 +24,11 @@
         resize && waterfallResize();
         this.update = waterfallUpdate;
         this.append = waterfallAppend;
-        childObserver();
+        observerChild();
     };
 
     // 监听属性/内容变化更新布局
-    function childObserver() {
+    function observerChild() {
         mutationObserver = new MutationObserver(function (mutationsList, observer) {
             clearTimeout(observerTimer);
             observerTimer = setTimeout(function () {
