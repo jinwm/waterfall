@@ -2,7 +2,9 @@
     let container = null,
         wrapper = null,
         wrapWidth = null,
-        items = null,
+		wrapperHeight = 0,
+        items = [],
+		contents = [],
         gap = 10,
         column = 2,
         vertical = 0,
@@ -23,6 +25,7 @@
             container.appendChild(wrapper);
         }
         items = Array.from(wrapper.querySelectorAll('.waterfall-item')).map(function (item, index) {
+			item.classList.add('append');
             return {
                 index,
                 el: item
@@ -33,12 +36,27 @@
         wrapWidth = wrapper.offsetWidth - gap * (column - 1);
         resize = params.resize || resize;
         resize && waterfallResize();
-        if (items.length > 0) {
-            !observerChild() && waterfallUpdate();
-        }
+		
+        // if (items.length > 0) {
+        //     !observerChild() && waterfallUpdate();
+        // }
+		observerChild();
 
-        this.update = waterfallUpdate;
-        this.append = waterfallAppend;
+        // this.update = waterfallUpdate;
+        // this.append = waterfallAppend;
+		
+		this.update = function(params){
+			waterfallUpdate(items,params);
+		};
+        this.append = function(innerHtml){
+			clearTimeout(appendTimer);
+			contents.push(innerHtml);
+			appendTimer = null;
+			appendTimer = setTimeout(function () {
+				waterfallAppend(contents);
+				contents = [];
+			}, 100)
+		};
     };
 
     // 监听内容变化更新布局
@@ -48,15 +66,17 @@
                 clearTimeout(observerTimer);
                 observerTimer = setTimeout(function () {
                     waterfallUpdate();
-                }, 100)
+                }, 300)
             }).observe(wrapper, {
                 attributes: true,
                 childList: true,
                 subtree: true
             });
-            return true;
-        }
-        return false;
+        }else{
+			if (items.length > 0) {
+			    waterfallUpdate();
+			}
+		}
     }
 
     // 响应宽度
@@ -76,46 +96,74 @@
     }
 
     // 追加内容
-    function waterfallAppend(content) {
-        waterfallItems += '<div class="waterfall-item fadeIn">' + content + '</div>'
-        clearTimeout(appendTimer);
-        appendTimer = null;
-        appendTimer = setTimeout(function () {
-            wrapper.innerHTML = wrapper.innerHTML + waterfallItems;
-            waterfallItems = '';
-            fadeInFn(Array.from(wrapper.querySelectorAll('.waterfall-item.fadeIn')), 100, function (items) {
-                items.forEach(function (item) {
-                    item.classList.remove('fadeIn');
-                })
-            });
-            waterfallUpdate();
-        }, 100)
+    function waterfallAppend(data) {
+		let appendItems = data.map(function(content,index){
+			let waterfallItem = document.createElement('div');
+			waterfallItem.className = 'waterfall-item append';
+			waterfallItem.innerHTML = content;
+			return {
+			    index,
+			    el: waterfallItem
+			}
+		}),
+		oldItemLength = 0;
+		loopAppend(appendItems);
+		
+		function loopAppend(appendItems){
+			let elFadeIn = fadeInInit([appendItems[0]], 100);
+			wrapper.appendChild(appendItems[0].el);
+			let timer = setInterval(function(){
+				let newItemLength = wrapper.querySelectorAll('.waterfall-item.append').length;
+				if(newItemLength > oldItemLength){
+					clearInterval(timer);
+					waterfallUpdate([appendItems[0]]);
+					items.push(appendItems[0]);
+					elFadeIn.fadeIn();
+					oldItemLength++;
+					if(appendItems.length>1){
+						loopAppend(appendItems.splice(1));
+					}else{
+						items.forEach(function(item){
+							item.el.classList.remove('append');
+						})
+					}
+				}
+			},0)
+		}
     }
 
     // 淡入动画
-    function fadeInFn(els, duration, callback) {
+    function fadeInInit(data, duration, callback) {
         let opacity = 0,
             translateY = gap,
             j = 10,
             time = 0,
             timer;
-        els.forEach(function (item) {
-            item.style.opacity = opacity;
-            item.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
+        data.forEach(function (item) {
+            item.el.style.opacity = opacity;
+            item.el.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
         })
-        timer = setInterval(function () {
-            time += duration / j;
-            if (time >= duration) {
-                clearInterval(timer);
-                callback && callback(els);
-            }
-            opacity = opacity + 1 / j;
-            translateY -= gap / j;
-            els.forEach(function (item) {
-                item.style.opacity = opacity;
-                item.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
-            })
-        }, duration / j);
+		
+		function fadeIn(){
+			timer = setInterval(function () {
+			    time += duration / j;
+			    if (time >= duration) {
+			        clearInterval(timer);
+					timer = null;
+			        callback && callback(data);
+			    }
+			    opacity = opacity + 1 / j;
+			    translateY -= gap / j;
+			    data.forEach(function (item) {
+			        item.el.style.opacity = opacity;
+			        item.el.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
+			    })
+			}, duration / j);
+			
+			return this;
+		}
+		
+		return {fadeIn};
     }
 
     // 获取元素在布局中的位置
@@ -129,7 +177,7 @@
         if (y > 0) {
             let sibIndex = index;
             for (let i = 0; i < y; i++) {
-                sibIndex = sibIndex - column;
+                sibIndex -= column;
                 pTop += items[sibIndex].el.offsetHeight;
             }
             pTop += gap * y;
@@ -142,14 +190,8 @@
     }
 
     // 更新布局
-    function waterfallUpdate(params) {
-        items = Array.from(wrapper.querySelectorAll('.waterfall-item')).map(function (item, index) {
-            return {
-                index,
-                el: item
-            }
-        });
-
+    function waterfallUpdate(data,params) {
+		data = data || items;
         if (params) {
             if (params.gap) {
                 gap = params.gap;
@@ -157,9 +199,9 @@
             }
             if (params.column) {
                 column = params.column;
-                vertical = Math.ceil(items.length / column);
+                vertical = Math.ceil(data.length / column);
             }
-            if (params.resize === true || params.resize === false) {
+            if (typeof params.resize === 'boolean') {
                 if (params.resize && !resize) {
                     resize = true;
                     waterfallResize();
@@ -169,9 +211,7 @@
                 }
             }
         }
-
-        let wrapperHeight = 0;
-        items.forEach(function (item) {
+        data.forEach(function (item) {
             let offset = getWaterfallIndex(item);
             let _wrapperHeight = offset.pTop + item.el.offsetHeight;
             wrapperHeight = _wrapperHeight > wrapperHeight ? _wrapperHeight : wrapperHeight;
@@ -182,7 +222,6 @@
             item.el.style.top = offset.pTop + 'px';
             item.el.style.left = offset.pLeft + 'px';
         })
-
         wrapper.style.width = '100%';
         wrapper.style.height = wrapperHeight + 'px';
         wrapper.style.overflow = 'hidden';
