@@ -16,6 +16,7 @@
         contentsTimer = null,
         loadLastIndex = 0,
         lazyLoadNum = 10,
+        lazy = false,
         isInit = true;
 
     window.Waterfall = function (params) {
@@ -33,6 +34,7 @@
         }) && pre, []);
         gap = params.gap || gap;
         column = params.column || column;
+        lazy = params.lazy || lazy;
         wrapWidth = wrapper.offsetWidth - gap * (column - 1);
         resize = params.resize || resize;
         resize && waterfallResize();
@@ -40,6 +42,23 @@
         if (itemAll.length > 0) {
             isInit = false;
             waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
+        }
+
+        let appendFn;
+        if (lazy) {
+            appendFn = function () {
+                isInit && (contentsTimer = setTimeout(function () {
+                    isInit = false;
+                    waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
+                }, 100))
+            }
+        } else {
+            appendFn = function () {
+                contentsTimer = setTimeout(function () {
+                    isInit = false;
+                    waterfallAppend2([...itemAll.map(item => item)], loadLastIndex);
+                }, 100)
+            }
         }
 
         // if (loadedItems.length > 0) {
@@ -56,11 +75,7 @@
         this.append = function (content) {
             clearTimeout(contentsTimer);
             itemAll.push(createItem(content));
-
-            isInit && (contentsTimer = setTimeout(function () {
-                isInit = false;
-                waterfallAppend2([...itemAll.map(item => item)], loadLastIndex);
-            }, 100))
+            appendFn();
         };
 
         container.addEventListener('scroll', function (e) {
@@ -183,9 +198,9 @@
                     oldItemLength++;
                     if (appendItems.length > 1) {
                         loopAppend(appendItems.splice(1));
-                    }else{
+                    } else {
                         obTimer = setInterval(() => {
-                            console.log(itemAll.length , newItemLength);
+                            console.log(itemAll.length, newItemLength);
                             if (itemAll.length > newItemLength) {
                                 clearInterval(obTimer);
                                 waterfallAppend([...itemAll]);
