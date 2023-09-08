@@ -22,6 +22,10 @@
 ```javascript
 var myWaterfall = new Waterfall({
     container: "#myWaterfallContainer",
+    column: 3,  // 布局的总列数
+    gap: 10, // 元素之间的距离
+    resize: true,  // 开启宽度自适应
+    lazy:true // 开启懒加载
     ...
 });
 
