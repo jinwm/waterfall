@@ -21,6 +21,11 @@
 
     window.Waterfall = function (params) {
         container = document.querySelector(params.container);
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.boxSizing = 'border-box';
+        container.style.overflowY = 'auto';
+
         wrapper = container.querySelector('.waterfall-wrapper');
         if (!wrapper) {
             wrapper = document.createElement('div');
@@ -41,7 +46,7 @@
 
         if (itemAll.length > 0) {
             isInit = false;
-            waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
+            waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
         }
 
         let appendFn;
@@ -49,14 +54,14 @@
             appendFn = function () {
                 isInit && (contentsTimer = setTimeout(function () {
                     isInit = false;
-                    waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
+                    waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
                 }, 100))
             }
         } else {
             appendFn = function () {
                 contentsTimer = setTimeout(function () {
                     isInit = false;
-                    waterfallAppend2([...itemAll.map(item => item)], loadLastIndex);
+                    waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
                 }, 100)
             }
         }
@@ -64,9 +69,8 @@
         // if (loadedItems.length > 0) {
         //     !observerChild() && waterfallUpdate();
         // }
-        observerChild();
 
-        // this.append = waterfallAppend;
+        observerChild();
 
         this.update = function (params) {
             waterfallUpdate(loadedItems, 0, params);
@@ -132,23 +136,58 @@
         }
     }
 
-    // 追加内容
-    function waterfallAppend(appendItems, startIndex = 0, endIndex = lazyLoadNum) {
+    function waterfallAppendLazy(appendItems, startIndex = 0, endIndex = lazyLoadNum) {
         let obTimer = null,
-            _appendItems = appendItems.slice(startIndex, endIndex);
+            _appendItems = appendItems.slice(startIndex, endIndex),
+            _appendItemsLength = _appendItems.length,
+            num = 0;
 
-        _appendItems.map(async (item, index) => {
-            item = await loopAppend(item);
+        // 一
+        // _appendItems.map(async (item, index) => {
+        //     await appendItem(item);
+        //     loadLastIndex++;
+        //     if (index == _appendItems.length - 1) {
+        //         endIndex = wrapper.querySelectorAll('.waterfall-item').length;
+        //         let wrapperHeight = waterfallUpdate(appendItems, endIndex).wrapperHeight;
+        //         if (wrapperHeight < container.offsetHeight * 1.2) { // 当前加载完毕，但内容高度不足以触发‘触底’事件
+        //             obTimer = setInterval(() => {
+        //                 if (itemAll.length > endIndex) {
+        //                     clearInterval(obTimer);
+        //                     renderStart = false;
+        //                     waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
+        //                 }
+        //             }, 100)
+        //         } else {
+        //             obTimer = setInterval(() => {
+        //                 if (renderStart && itemAll.length > endIndex) {
+        //                     clearInterval(obTimer);
+        //                     renderStart = false;
+        //                     waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
+        //                 }
+        //             }, 100)
+        //         }
+        //     }
+        // })
+
+        // 二
+        loopItems(_appendItems);
+        async function loopItems(data) {
+            if (data.length == 0) return;
+            let item = data[0];
+            await appendItem(item);
             loadLastIndex++;
-            if (index == _appendItems.length - 1) {
+            num++;
+            let wrapperHeight = waterfallUpdate([item], item.index).wrapperHeight;
+            // console.log(num , _appendItemsLength - 1);
+            if (num == _appendItemsLength) {
                 endIndex = wrapper.querySelectorAll('.waterfall-item').length;
-                let wrapperHeight = waterfallUpdate(appendItems, endIndex).wrapperHeight;
-                if (wrapperHeight < container.offsetHeight * .9) { // 当前加载完毕，但内容高度不足以触发‘触底’事件
+                // console.log('wrapperHeight', wrapperHeight, container.offsetHeight);
+                if (wrapperHeight < container.offsetHeight * 1.2) { // 当前加载完毕，但内容高度不足以触发‘触底’事件
                     obTimer = setInterval(() => {
                         if (itemAll.length > endIndex) {
                             clearInterval(obTimer);
                             renderStart = false;
-                            waterfallAppend(itemAll, endIndex, endIndex + lazyLoadNum);
+                            waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
                         }
                     }, 100)
                 } else {
@@ -156,60 +195,53 @@
                         if (renderStart && itemAll.length > endIndex) {
                             clearInterval(obTimer);
                             renderStart = false;
-                            waterfallAppend(itemAll, endIndex, endIndex + lazyLoadNum);
+                            waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
                         }
                     }, 100)
                 }
+            } else {
+                loopItems(data.splice(1));
             }
-        })
-
-        function loopAppend(item) {
-            return new Promise(function (res, rej) {
-                wrapper.appendChild(item.el);
-                let fadeIn = fadeInInit([item], 100);
-                let timer = setInterval(() => {
-                    if (item.el.offsetHeight) {
-                        clearInterval(timer);
-                        // wfus.push(waterfallUpdate([item]).wrapperHeight);
-                        loadedItems.push(item);
-                        fadeIn.start();
-                        res(item);
-                    }
-                }, 100)
-            })
         }
     }
 
-    function waterfallAppend2(appendItems) {
-        let oldItemLength = 0;
-        loopAppend(appendItems);
+    function waterfallAppend(appendItems, startIndex = loadLastIndex) {
+        let _appendItems = appendItems.slice(startIndex);
 
-        function loopAppend(appendItems) {
-            let fadeIn = fadeInInit([appendItems[0]], 100);
+        loopItems(_appendItems);
 
-            wrapper.appendChild(appendItems[0].el);
-            let timer = setInterval(function () {
-                let newItemLength = wrapper.querySelectorAll('.waterfall-item').length;
-                if (newItemLength > oldItemLength) {
-                    clearInterval(timer);
-                    waterfallUpdate([appendItems[0]]);
-                    // itemAll.push(appendItems[0]);
-                    fadeIn.start();
-                    oldItemLength++;
-                    if (appendItems.length > 1) {
-                        loopAppend(appendItems.splice(1));
-                    } else {
-                        obTimer = setInterval(() => {
-                            console.log(itemAll.length, newItemLength);
-                            if (itemAll.length > newItemLength) {
-                                clearInterval(obTimer);
-                                waterfallAppend([...itemAll]);
-                            }
-                        }, 100)
-                    }
-                }
-            }, 0)
+        async function loopItems(data) {
+            if (data.length == 0) return;
+            let item = data[0];
+            await appendItem(item);
+            waterfallUpdate([item], item.index);
+            loadLastIndex++;
+            if (data.length > 1) {
+                loopItems(data.splice(1));
+            }
         }
+    }
+
+    // 追加内容
+    function appendItem(item) {
+        return new Promise(function (res, rej) {
+            wrapper.appendChild(item.el);
+            let fadeIn = fadeInInit([item], 100);
+            let timer = setInterval(() => {
+                if (item.el.offsetHeight) {
+                    clearInterval(timer);
+                    loadedItems.push(item);
+                    fadeIn.start();
+                    res(item);
+                }
+            }, 50)
+
+            // await wrapper.appendChild(item.el);
+            // let fadeIn = fadeInInit([item], 100);
+            // loadedItems.push(item);
+            // fadeIn.start();
+            // res(item);
+        })
     }
 
     // 淡入动画
