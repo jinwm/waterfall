@@ -39,6 +39,7 @@
         }) && pre, []);
         gap = params.gap || gap;
         column = params.column || column;
+        // lazyLoadNum = column * 2 > lazyLoadNum ? column * 2 : lazyLoadNum;
         lazy = params.lazy || lazy;
         wrapWidth = wrapper.offsetWidth - gap * (column - 1);
         resize = params.resize || resize;
@@ -252,16 +253,20 @@
             time = 0,
             timer;
         data.forEach(function (item) {
+            item.el.style.pointerEvents = 'none';
             item.el.style.opacity = opacity;
             item.el.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
         })
 
         function fadeIn() {
             timer = setInterval(function () {
-                time += duration / step;
+                time += duration / step / 10;
                 if (time >= duration) {
                     clearInterval(timer);
                     timer = null;
+                    data.forEach(function (item) {
+                        item.el.style.pointerEvents = 'auto';
+                    })
                     callback && callback(data);
                 }
                 opacity = opacity + 1 / step;
@@ -270,7 +275,7 @@
                     item.el.style.opacity = opacity;
                     item.el.style.transform = 'translate3d(0, -' + translateY + 'px, 0)';
                 })
-            }, duration / step);
+            }, duration / step / 10);
 
             return this;
         }
