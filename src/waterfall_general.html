@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>瀑布流布局-更通用版本</title>
+</head>
+
+<body>
+  <div class="p-box" style="width: 400px;position: relative;">
+    <div class="item"
+      style="width: 200px;height: 500px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 600px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 500px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 200px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 300px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 300px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 400px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 400px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 400px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+    <div class="item"
+      style="width: 200px;height: 600px;background-color: rgba(0,0,0,0.1);opacity: 0.1;transition: all .3s;"></div>
+  </div>
+</body>
+<script src="./waterfall.js"></script>
+
+<script>
+  function resize() {
+    const data = [];
+    document.querySelectorAll('.p-box .item').forEach((item, index) => {
+      const width = item.offsetWidth;
+      const height = item.offsetHeight;
+      data.push({ width, height, item: item, index });
+    });
+    const result = waterfall(data, {
+      columnNum: 4,
+      columnWidth: 200,
+      gap: 20
+    });
+
+    // 考虑网页、小程序等通用性，result返回为布局后的宽高、位置等参数，后续需根据参数手动去更新dom的样式
+    console.log(result);
+
+    result.columns.forEach((column) => {
+      column.forEach((item) => {
+        item.item.style.position = 'absolute';
+        item.item.style.left = `${item.position.x}px`;
+        item.item.style.top = `${item.position.y}px`;
+      })
+    })
+  }
+
+  resize();
+  window.myResize = resize;
+
+</script>
+
+</html>
