@@ -47,17 +47,20 @@
 </body>
 <script src="./index.js"></script>
 <script>
+  const width = document.getElementById('test-wrapper').clientWidth;
+  const height = document.getElementById('test-wrapper').clientHeight;
+
   let wfl = new Waterfall({
     container: {
       id: '#test-wrapper',
-      width: 414,
-      height: 500
+      width,
+      height
     },
     column: 2,
     lazy: true,
-    resize: true
+    resize: true,
+    observer: true,
   })
-
 
   let n = 0;
   function append() {
