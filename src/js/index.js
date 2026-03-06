@@ -1,4 +1,4 @@
-(function () {
+function Waterfall(params) {
   let container = null,
     wrapper = null,
     wrapWidth = null,
@@ -17,67 +17,67 @@
     loadLastIndex = 0,
     lazyLoadNum = 10,
     lazy = false,
-    isInit = true;
+    isInit = true,
+    updateColumnsCache;
 
-  window.Waterfall = function (params) {
-    createContainer({ ...params.container });
+  createContainer({ ...params.container });
 
-    itemAll = Array.from(wrapper.querySelectorAll('.waterfall-item')).reduce((pre, cur, index) => pre.push({
-      index,
-      el: cur
-    }) && pre, []);
-    gap = params.gap || gap;
-    column = params.column || column;
-    // lazyLoadNum = column * 2 > lazyLoadNum ? column * 2 : lazyLoadNum;
-    lazy = params.lazy || lazy;
-    wrapWidth = wrapper.offsetWidth - gap * (column - 1);
-    resize = params.resize || resize;
-    resize && waterfallResize();
+  itemAll = Array.from(wrapper.querySelectorAll('.waterfall-item')).reduce((pre, cur, index) => pre.push({
+    index,
+    el: cur
+  }) && pre, []);
+  gap = params.gap || gap;
+  column = params.column || column;
+  // lazyLoadNum = column * 2 > lazyLoadNum ? column * 2 : lazyLoadNum;
+  lazy = params.lazy || lazy;
+  wrapWidth = wrapper.offsetWidth - gap * (column - 1);
+  resize = params.resize || resize;
+  resize && waterfallResize();
 
-    if (itemAll.length > 0) {
-      isInit = false;
-      waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
+  if (itemAll.length > 0) {
+    isInit = false;
+    waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
+  }
+
+  let appendFn;
+  if (lazy) {
+    appendFn = function () {
+      isInit && (contentsTimer = setTimeout(function () {
+        isInit = false;
+        waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
+      }, 100))
     }
-
-    let appendFn;
-    if (lazy) {
-      appendFn = function () {
-        isInit && (contentsTimer = setTimeout(function () {
-          isInit = false;
-          waterfallAppendLazy([...itemAll.map(item => item)], loadLastIndex);
-        }, 100))
-      }
-    } else {
-      appendFn = function () {
-        contentsTimer = setTimeout(function () {
-          isInit = false;
-          waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
-        }, 100)
-      }
+  } else {
+    appendFn = function () {
+      contentsTimer = setTimeout(function () {
+        isInit = false;
+        waterfallAppend([...itemAll.map(item => item)], loadLastIndex);
+      }, 100)
     }
+  }
 
-    // if (loadedItems.length > 0) {
-    //     !observerChild() && waterfallUpdate();
-    // }
-
+  // if (loadedItems.length > 0) {
+  //     !observerChild() && waterfallUpdate();
+  // }
+  if (params.observer) {
     observerChild();
+  }
 
-    this.update = function (params) {
-      waterfallUpdate(loadedItems, 0, params);
-    };
-
-    this.append = function (content) {
-      clearTimeout(contentsTimer);
-      itemAll.push(createItem(content));
-      appendFn();
-    };
-
-    container.addEventListener('scroll', function (e) {
-      if (container.scrollTop + container.offsetHeight >= container.scrollHeight * .9) {
-        renderStart = true;
-      }
-    })
+  this.update = function (params) {
+    waterfallUpdate({ segIndex: 0, params });
   };
+
+  this.append = function (content) {
+    clearTimeout(contentsTimer);
+    itemAll.push(createItem(content));
+    appendFn();
+  };
+
+  container.addEventListener('scroll', function (e) {
+    if (container.scrollTop + container.offsetHeight >= container.scrollHeight * .9) {
+      renderStart = true;
+    }
+  })
 
   function createContainer({ id, width, height } = {}) {
     const baseContainer = document.querySelector(id);
@@ -105,6 +105,7 @@
     let waterfallItem = document.createElement('div');
     waterfallItem.className = 'waterfall-item';
     waterfallItem.innerHTML = content;
+    waterfallItem.setAttribute('data-waterfall-index', itemAll.length);
     return {
       index: itemAll.length,
       el: waterfallItem
@@ -114,10 +115,34 @@
   // 监听内容变化更新布局
   function observerChild() {
     if (window.MutationObserver) {
+      let updateColumns = [];
       mutationObserver = new MutationObserver(function (mutationsList, observer) {
         clearTimeout(observerTimer);
+        mutationsList.forEach(mutation => {
+          let dataIndex = mutation.target.getAttribute('data-waterfall-index');
+
+          if (!dataIndex) {
+            let parent = mutation.target.parentElement;
+            while (parent && !parent.getAttribute('data-waterfall-index')) {
+              parent = parent.parentElement;
+            }
+            if (parent) {
+              dataIndex = parent.getAttribute('data-waterfall-index');
+            }
+          }
+
+          if (dataIndex) {
+            if (!updateColumns.includes(dataIndex % column)) {
+              updateColumns.push(dataIndex % column);
+            }
+          }
+        })
+
         observerTimer = setTimeout(function () {
-          waterfallUpdate();
+          updateColumnsCache = [...updateColumns];
+          updateColumns = [];
+          // console.log('updateColumns', updateColumnsCache);
+          waterfallUpdate({ updateColumns: updateColumnsCache });
         }, 300)
       }).observe(wrapper, {
         attributes: true,
@@ -134,9 +159,10 @@
   // 响应宽度
   function waterfallResize() {
     if (!resize) {
-      return window.onresize = null;
+      window.removeEventListener('resize', handleResize, false);
+      return;
     }
-    window.onresize = handleResize;
+    window.addEventListener('resize', handleResize, false);
 
     function handleResize() {
       clearTimeout(resizeTimer);
@@ -154,34 +180,6 @@
       _appendItemsLength = _appendItems.length,
       num = 0;
 
-    // 一
-    // _appendItems.map(async (item, index) => {
-    //     await appendItem(item);
-    //     loadLastIndex++;
-    //     if (index == _appendItems.length - 1) {
-    //         endIndex = wrapper.querySelectorAll('.waterfall-item').length;
-    //         let wrapperHeight = waterfallUpdate(appendItems, endIndex).wrapperHeight;
-    //         if (wrapperHeight < container.offsetHeight * 1.2) { // 当前加载完毕，但内容高度不足以触发‘触底’事件
-    //             obTimer = setInterval(() => {
-    //                 if (itemAll.length > endIndex) {
-    //                     clearInterval(obTimer);
-    //                     renderStart = false;
-    //                     waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
-    //                 }
-    //             }, 100)
-    //         } else {
-    //             obTimer = setInterval(() => {
-    //                 if (renderStart && itemAll.length > endIndex) {
-    //                     clearInterval(obTimer);
-    //                     renderStart = false;
-    //                     waterfallAppendLazy(itemAll, endIndex, endIndex + lazyLoadNum);
-    //                 }
-    //             }, 100)
-    //         }
-    //     }
-    // })
-
-    // 二
     loopItems(_appendItems);
     async function loopItems(data) {
       if (data.length == 0) return;
@@ -189,7 +187,7 @@
       await appendItem(item);
       loadLastIndex++;
       num++;
-      let wrapperHeight = waterfallUpdate([item], item.index).wrapperHeight;
+      let wrapperHeight = waterfallUpdate({ items: [item], segIndex: item.index }).wrapperHeight;
       // console.log(num , _appendItemsLength - 1);
       if (num == _appendItemsLength) {
         endIndex = wrapper.querySelectorAll('.waterfall-item').length;
@@ -226,7 +224,7 @@
       if (data.length == 0) return;
       let item = data[0];
       await appendItem(item);
-      waterfallUpdate([item], item.index);
+      waterfallUpdate({ items: [item], segIndex: item.index });
       loadLastIndex++;
       if (data.length > 1) {
         loopItems(data.splice(1));
@@ -322,7 +320,7 @@
   }
 
   // 更新布局
-  function waterfallUpdate(data = loadedItems, segIndex = 0, params) {
+  function waterfallUpdate({ items = loadedItems, segIndex = 0, updateColumns, params } = {}) {
     if (params) {
       if (params.gap) {
         gap = params.gap;
@@ -330,7 +328,7 @@
       }
       if (params.column) {
         column = params.column;
-        vertical = Math.ceil(data.length / column);
+        vertical = Math.ceil(items.length / column);
       }
       if (typeof params.resize === 'boolean') {
         if (params.resize && !resize) {
@@ -343,21 +341,39 @@
       }
     }
 
-    data.forEach(function (item, index) {
+    // items.forEach(function (item, index) {
+    //   let offset = getWaterfallOffset(item);
+    //   let _wrapperHeight = offset.pTop + item.el.offsetHeight;
+    //   wrapperHeight = _wrapperHeight > wrapperHeight ? _wrapperHeight : wrapperHeight;
+
+    // if (segIndex >= index || segIndex == 0) {
+    //     item.el.style.overflow = 'hidden';
+    //     item.el.style.position = 'absolute';
+    //     item.el.style.transition = 'all .3s';
+    //     item.el.style.width = wrapWidth / column + 'px';
+    //     item.el.style.top = offset.pTop + 'px';
+    //     item.el.style.left = offset.pLeft + 'px';
+    //   }
+    // })
+
+    items.filter((item, index) => {
+      if (Array.isArray(updateColumns)) {
+        return updateColumns.includes(item.index % column);
+      }
+      return segIndex >= index || segIndex == 0;
+    }).forEach(function (item) {
       let offset = getWaterfallOffset(item);
       let _wrapperHeight = offset.pTop + item.el.offsetHeight;
       wrapperHeight = _wrapperHeight > wrapperHeight ? _wrapperHeight : wrapperHeight;
 
-      if (segIndex >= index || segIndex == 0) {
-        item.el.style.overflow = 'hidden';
-        item.el.style.position = 'absolute';
-        item.el.style.transition = 'all .3s';
-        item.el.style.width = wrapWidth / column + 'px';
-        item.el.style.top = offset.pTop + 'px';
-        item.el.style.left = offset.pLeft + 'px';
-      }
-
+      item.el.style.overflow = 'hidden';
+      item.el.style.position = 'absolute';
+      item.el.style.transition = 'all .3s';
+      item.el.style.width = wrapWidth / column + 'px';
+      item.el.style.top = offset.pTop + 'px';
+      item.el.style.left = offset.pLeft + 'px';
     })
+
     wrapper.style.width = '100%';
     wrapper.style.height = wrapperHeight + 'px';
     wrapper.style.overflow = 'hidden';
@@ -367,4 +383,10 @@
       wrapperHeight
     }
   }
-})()
+};
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Waterfall;
+} else {
+  window.Waterfall = Waterfall;
+}
